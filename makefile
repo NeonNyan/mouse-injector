@@ -4,9 +4,9 @@
 #mingw32-make.exe -f makefile to compile
 
 #Compiler directories
-MINGWDIR = C:/MinGW64/bin/
-CC = $(MINGWDIR)gcc
-WINDRES = $(MINGWDIR)windres
+MINGWDIR ?= C:/MinGW64/bin/
+CC ?= $(MINGWDIR)gcc
+WINDRES ?= $(MINGWDIR)windres
 
 #Source directories
 SRCDIR = ./
@@ -73,4 +73,4 @@ $(OBJDIR)ui.res: $(UIDIR)ui.rc $(UIDIR)resource.h
 	$(WINDRES) -i $(UIDIR)ui.rc -o $(OBJDIR)ui.res $(RESFLAGS)
 
 clean:
-	rm -f $(SRCDIR)*.dll $(OBJDIR)*.o $(OBJDIR)*.res
+	rm -fr $(SRCDIR)*.dll $(OBJDIR)*.o $(OBJDIR)*.res
