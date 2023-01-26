@@ -18,33 +18,36 @@
 // You should have received a copy of the GNU General Public License
 // along with this program; if not, visit http://www.gnu.org/licenses/gpl-2.0.html
 //==========================================================================
-#define TICKRATE_OC 2 // 2ms (500 Hz) for overclocked
-#define TICKRATE_STOCK 4 // 4ms (250 Hz) for stock speed
-#define TICKRATE (emuoverclock ? TICKRATE_OC : TICKRATE_STOCK)
-#define TIMESTEP TICKRATE / 1000
-#if SPEEDRUN_BUILD // fov/ratio hacks gives unfair advantage, always use default values for speedrun build
-#define RATIOFACTOR 1.f
-#define OVERRIDEFOV 60
-#else
-#define RATIOFACTOR (((float)overrideratiowidth / (float)overrideratioheight) / (16.f / 9.f))
-#define OVERRIDEFOV overridefov
-#endif
 
-extern BUTTONS CONTROLLER[4];
-extern struct PROFILE_STRUCT PROFILE[4];
-extern struct DEVICE_STRUCT DEVICE[4];
+/*
+    address 0x8009a024
+    symbol g_Vars offset 0x64
+*/
+#define JOANNADATA(X) (unsigned int)EMU_ReadInt(0x80000354 + (X * 0x4)) // player pointer address (0x4 offset for each players)
+/*
+  ??
+*/
+#define PD_debugtext (unsigned int)EMU_ReadInt(0x803C79F0) // debug text (used to check if PD is running)
 
-extern const unsigned char **rdramptr;
-extern const unsigned char **romptr;
-extern int stopthread;
-extern int mousetogglekey;
-extern int mousetoggle;
-extern int mouselockonfocus;
-extern int mouseunlockonloss;
-extern int configdialogopen;
-extern HWND emulatorwindow;
-extern int emuoverclock;
-extern int overridefov;
-extern int overrideratiowidth, overrideratioheight;
-extern int geshowcrosshair;
-extern int bypassviewmodelfovtweak;
+
+/*
+    symbol g_PlayersWithControl
+*/
+#define PD_menu(X) 0x80000374 + (X * 0x4) // player menu flag (0 = PD is in menu) (0x4 offset for each players)
+
+/*
+    symbol g_Vars offset 0x2ac
+*/
+#define PD_camera (signed int)EMU_ReadInt(0x80000364) // camera flag (1 = gameplay, 2 & 3 = ???, 4 = multiplayer sweep, 5 = gameover screen, 6 = cutscene mode, 7 = force player to move: extraction's dark room)
+/*
+    symbol g_LvPaused
+*/
+#define PD_pause 0x80000368 // menu flag (1 = PD is paused)
+/*
+    symbol g_TitleNextStage
+*/
+#define PD_stageid 0x8000036c // stage id
+/*
+    symbol g_MpSetup offset 0x1e
+*/
+#define PD_mppause 0x80000370 // used to check if multiplayer match is paused

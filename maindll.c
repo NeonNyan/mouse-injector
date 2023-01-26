@@ -2,6 +2,7 @@
 // Mouse Injector Plugin
 //==========================================================================
 // Copyright (C) 2016-2021 Carnivorous
+// Copyright Perfect Dark decomp compatability (C) 2023 Catherine Reprobate
 // All rights reserved.
 //
 // Mouse Injector is free software; you can redistribute it and/or modify it
@@ -25,7 +26,11 @@
 #include "maindll.h"
 #include "device.h"
 #include "discord.h"
+#if PD_DECOMP
+#include "./ui/resource.perfectdark.h"
+#else
 #include "./ui/resource.h"
+#endif
 #include "vkey.h"
 
 #define DLLEXPORT __declspec(dllexport)
@@ -33,8 +38,12 @@
 
 static HINSTANCE hInst = NULL;
 static HANDLE injectthread = 0; // thread identifier
-static wchar_t inifilepath[MAX_PATH] = {L'\0'}; // mouseinjector.ini filepath
+static wchar_t inifilepath[MAX_PATH] = {L'\0'}; // mouseinjector ini filepath
+#if PD_DECOMP
+static const char inifilepathdefault[] = ".\\plugin\\mouseinjector_pddecomp.ini"; // mouseinjector ini filepath (safe default char type) for perfect dark decomp
+#else
 static const char inifilepathdefault[] = ".\\plugin\\mouseinjector.ini"; // mouseinjector.ini filepath (safe default char type)
+#endif
 static int lastinputbutton = 0; // used to check and see if user pressed button twice in a row (avoid loop for spacebar/enter/click)
 static int currentplayer = PLAYER1;
 static int defaultmouse = -1, defaultkeyboard = -1;
@@ -119,7 +128,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 				wcsncpy(directory, filepath, wcslen(filepath) - dllnamelength + 1); // remove dll filename from filepath string to get directory path
 				directory[wcslen(filepath) - dllnamelength + 1] = L'\0'; // string needs terminator so add zero character to end
 				wcsncpy(inifilepath, directory, MAX_PATH); // copy directory to inifilepath
+				#if PD_DECOMP
+				wcscat(inifilepath, L"mouseinjector_pddecomp.ini"); // add mouseinjector.ini to inifilepath, to get complete filepath to mouseinjector.ini
+				#else
 				wcscat(inifilepath, L"mouseinjector.ini"); // add mouseinjector.ini to inifilepath, to get complete filepath to mouseinjector.ini
+				#endif
 			}
 			break;
 		}
@@ -145,7 +158,7 @@ static int Init(const HWND hW)
 		if(defaultmouse != -1 && defaultkeyboard != -1)
 			break;
 	}
-	INI_Load(hW, ALLPLAYERS); // inform user if mouseinjector.ini is corrupted/missing
+	INI_Load(hW, ALLPLAYERS); // inform user if mouseinjector ini is corrupted/missing
 	UpdateControllerStatus();
 	return 1;
 }
@@ -221,7 +234,7 @@ static BOOL CALLBACK GUI_Config(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam
 					EndDialog(hW, FALSE);
 					return TRUE;
 				case IDC_HELPPOPUP:
-					MessageBoxA(hW, "\tIf you are having issues, please read the file\n\tBUNDLE_README.txt located in the 1964 directory.\n\n\tMouse Injector for GE/PD, Copyright (C) "__CURRENTYEAR__" Carnivorous\n\tMouse Injector comes with ABSOLUTELY NO WARRANTY;\n\tThis is free software, and you are welcome to redistribute it\n\tunder the terms of the GNU General Public License.\n\n\tThis plugin is powered by ManyMouse input library,\n\tCopyright (C) 2005-2012 Ryan C. Gordon <icculus.org>", "Mouse Injector - Help", MB_ICONINFORMATION | MB_OK);
+					MessageBoxA(hW, "\tIf you are having issues, please read the file\n\tBUNDLE_README.txt located in the 1964 directory.\n\n\tMouse Injector for Perfect Dark Decomp, Copyright (C) 2021 Carnivorous, 2023 Catherine Reprobate.\n\tMouse Injector comes with ABSOLUTELY NO WARRANTY;\n\tThis is free software, and you are welcome to redistribute it\n\tunder the terms of the GNU General Public License.\n\n\tThis plugin is powered by ManyMouse input library,\n\tCopyright (C) 2005-2012 Ryan C. Gordon <icculus.org>", "Mouse Injector - Help", MB_ICONINFORMATION | MB_OK);
 					break;
 				case IDC_CANCEL:
 					INI_Load(hW, ALLPLAYERS); // reload all player settings from file
@@ -269,6 +282,14 @@ static BOOL CALLBACK GUI_Config(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam
 				case IDC_PRIMARY15:
 				case IDC_PRIMARY16:
 				case IDC_PRIMARY17:
+				#if PD_DECOMP
+				case IDC_PRIMARY18:
+				case IDC_PRIMARY19:
+				case IDC_PRIMARY20:
+				case IDC_PRIMARY21:
+				case IDC_PRIMARY22:
+				case IDC_PRIMARY23:
+				#endif
 					GUI_ProcessKey(hW, LOWORD(wParam), 0);
 					break;
 				case IDC_SECONDARY00:
@@ -289,6 +310,14 @@ static BOOL CALLBACK GUI_Config(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam
 				case IDC_SECONDARY15:
 				case IDC_SECONDARY16:
 				case IDC_SECONDARY17:
+				#if PD_DECOMP
+				case IDC_SECONDARY18:
+				case IDC_SECONDARY19:
+				case IDC_SECONDARY20:
+				case IDC_SECONDARY21:
+				case IDC_SECONDARY22:
+				case IDC_SECONDARY23:
+				#endif
 					GUI_ProcessKey(hW, LOWORD(wParam), 1);
 					break;
 				case IDC_INVERTPITCH:
@@ -404,7 +433,7 @@ static void GUI_Init(const HWND hW)
 	SetDlgItemTextA(hW, IDC_RATIOWIDTH, overrideratio);
 	sprintf(overrideratio, "%d", overrideratioheight);
 	SetDlgItemTextA(hW, IDC_RATIOHEIGHT, overrideratio);
-#ifdef SPEEDRUN_BUILD // hide fov/ratio elements for speedrun build and replace info box with details about the speedrun build
+#if SPEEDRUN_BUILD // hide fov/ratio elements for speedrun build and replace info box with details about the speedrun build
 	for(int index = IDC_RATIOSTATIC; index <= IDC_FOV_NOTE; index++) // hide the ratio/fov dialog items
 		ShowWindow(GetDlgItem(hW, index), 0);
 	ShowWindow(GetDlgItem(hW, IDC_BYPASSVIEWMODELFOVWEAK), 0); // hide the bypass viewmodel fov tweak checkbox
@@ -433,7 +462,7 @@ static void GUI_Refresh(const HWND hW, const int revertbtn)
 	// load buttons from current player's profile
 	for(int button = 0; button < TOTALBUTTONS; button++) // load buttons from player struct and set input button statuses (setting to disabled/enabled)
 	{
-#ifdef SPEEDRUN_BUILD // do not unlock reload button for speedrun build
+#if SPEEDRUN_BUILD // do not unlock reload button for speedrun build
 		if(button == RELOAD)
 			continue;
 #endif
@@ -682,7 +711,7 @@ static void INI_Load(const HWND hW, const int loadplayer)
 	#define BUTTONBLKSIZE (ALLPLAYERS * (TOTALBUTTONS + TOTALBUTTONS)) // 4 PLAYERS * (BUTTONPRIM + BUTTONSEC)
 	#define SETTINGBLKSIZE (ALLPLAYERS * TOTALSETTINGS) // 4 PLAYERS * SETTINGS
 	#define TOTALLINES (BUTTONBLKSIZE + SETTINGBLKSIZE + 8) // profile struct[all players] + overridefov + overrideratiowidth + overrideratioheight + geshowcrosshair + bypassviewmodelfovtweak + mouselockonfocus + mouseunlockonloss + mousetogglekey
-	FILE *fileptr; // file pointer for mouseinjector.ini
+	FILE *fileptr; // file pointer for mouseinjector ini
 	if((fileptr = fopen(inifilepathdefault, "r")) == NULL) // if INI file was not found
 		fileptr = _wfopen(inifilepath, L"r"); // reattempt to load INI file using wide character filepath
 	if(fileptr != NULL) // if INI file was found
@@ -696,7 +725,7 @@ static void INI_Load(const HWND hW, const int loadplayer)
 			counter++; // add 1 to counter, so the next line can be read
 		}
 		fclose(fileptr); // close the file stream
-		if(counter == TOTALLINES) // check mouseinjector.ini if it has the correct new lines
+		if(counter == TOTALLINES) // check mouseinjector ini if it has the correct new lines
 		{
 			const int safesettings[2][TOTALSETTINGS] = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, {3, 100, 5, 18, 1, 1, 1, 1, 16, 16}}; // safe min/max values
 			int everythingisfine = 1; // for now...
@@ -755,20 +784,28 @@ static void INI_Load(const HWND hW, const int loadplayer)
 				return; // we're done
 			}
 		}
-		MessageBoxA(hW, "Loading mouseinjector.ini failed!\n\nInvalid settings detected, resetting to default...", "Mouse Injector - Error", MB_ICONERROR | MB_OK); // tell the user loading mouseinjector.ini failed
+		#if PD_DECOMP
+		MessageBoxA(hW, "Loading mouseinjector_pddecomp.ini failed!\n\nInvalid settings detected, resetting to default...", "Mouse Injector - Error", MB_ICONERROR | MB_OK); // tell the user loading mouseinjector.ini failed
+		#else
+		MessageBoxA(hW, "Loading mouseinjector.ini failed!\n\nInvalid settings detected, resetting to default...", "Mouse Injector - Error", MB_ICONERROR | MB_OK); // tell the user loading mouseinjector ini failed
+		#endif
 	}
 	else
-		MessageBoxA(hW, "Loading mouseinjector.ini failed!\n\nCould not find mouseinjector.ini file, creating mouseinjector.ini...", "Mouse Injector - Error", MB_ICONERROR | MB_OK); // tell the user loading mouseinjector.ini failed
+		#if PD_DECOMP
+		MessageBoxA(hW, "Loading mouseinjector_pddecomp.ini failed!\n\nCould not find mouseinjector_pddecomp.ini file, creating mouseinjector_pddecomp.ini...", "Mouse Injector - Error", MB_ICONERROR | MB_OK); // tell the user loading mouseinjector ini failed
+		#else
+		MessageBoxA(hW, "Loading mouseinjector_pddecomp.ini failed!\n\nCould not find mouseinjector_pddecomp.ini file, creating mouseinjector_pddecomp.ini...", "Mouse Injector - Error", MB_ICONERROR | MB_OK); // tell the user loading mouseinjector ini failed
+		#endif
 	INI_Reset(ALLPLAYERS);
 	INI_SetConfig(PLAYER1, WASD);
-	INI_Save(hW); // create/overwrite mouseinjector.ini with default values
+	INI_Save(hW); // create/overwrite mouseinjector ini with default values
 }
 //==========================================================================
 // Purpose: save profile settings
 //==========================================================================
 static void INI_Save(const HWND hW)
 {
-	FILE *fileptr; // create a file pointer and open mouseinjector.ini from same dir as our plugin
+	FILE *fileptr; // create a file pointer and open mouseinjector ini from same dir as our plugin
 	if((fileptr = fopen(inifilepathdefault, "w")) == NULL) // if INI file was not found
 		fileptr = _wfopen(inifilepath, L"w"); // reattempt to write INI file using wide character filepath
 	if(fileptr != NULL) // if INI file was found
@@ -786,7 +823,11 @@ static void INI_Save(const HWND hW)
 		fclose(fileptr); // close the file stream
 	}
 	else // if saving file failed (could be set to read only, antivirus is preventing file writing or filepath is invalid)
-		MessageBoxA(hW, "Saving mouseinjector.ini failed!\n\nCould not write mouseinjector.ini file...", "Mouse Injector - Error", MB_ICONERROR | MB_OK); // tell the user saving mouseinjector.ini failed
+		#if PD_DECOMP
+		MessageBoxA(hW, "Saving mouseinjector_pddecomp.ini failed!\n\nCould not write mouseinjector_pddecomp.ini file...", "Mouse Injector - Error", MB_ICONERROR | MB_OK); // tell the user saving mouseinjector ini failed
+		#else
+		MessageBoxA(hW, "Saving mouseinjector.ini failed!\n\nCould not write mouseinjector.ini file...", "Mouse Injector - Error", MB_ICONERROR | MB_OK); // tell the user saving mouseinjector ini failed
+		#endif
 }
 //==========================================================================
 // Purpose: reset a player struct or all players
@@ -829,7 +870,15 @@ static void INI_Reset(const int playerflag)
 //==========================================================================
 static void INI_SetConfig(const int playerflag, const int config)
 {
-	const int defaultbuttons[2][TOTALBUTTONS] = {{87, 83, 65, 68, 1, 2, 82, 81, 69, 13, 17, 0, 10, 11, 38, 40, 37, 39}, {69, 68, 83, 70, 1, 2, 84, 87, 82, 13, 65, 0, 10, 11, 38, 40, 37, 39}}; // WASD/ESDF
+	#if PD_DECOMP
+	const int defaultbuttons[2][TOTALBUTTONS] = {
+		{87, 83, 65, 68, 1, 2, 82, 81, 69, 13, 17, 0, 10, 11, 38, 40, 37, 39, 0, 0, 0, 0, 0, 0}, // WASD
+		{69, 68, 83, 70, 1, 2, 84, 87, 82, 13, 65, 0, 10, 11, 38, 40, 37, 39, 0, 0, 0, 0, 0, 0}}; // ESDF
+	#else
+	const int defaultbuttons[2][TOTALBUTTONS] = {
+		{87, 83, 65, 68, 1, 2, 82, 81, 69, 13, 17, 0, 10, 11, 38, 40, 37, 39}, // WASD
+		{69, 68, 83, 70, 1, 2, 84, 87, 82, 13, 65, 0, 10, 11, 38, 40, 37, 39}}; // ESDF
+	#endif
 	for(int buttons = 0; buttons < TOTALBUTTONS; buttons++)
 	{
 		PROFILE[playerflag].BUTTONPRIM[buttons] = defaultbuttons[config - 1][buttons];
@@ -914,8 +963,12 @@ DLLEXPORT void CALL GetDllInfo(PLUGIN_INFO *PluginInfo)
 {
 	PluginInfo->Version = 0xFBAD; // no emulator supports this other than my disgusting version of 1964 (awful hack that i created because plugins are not complicated enough and i don't know what the f**k i am doing as evident from the code i've written)
 	PluginInfo->Type = PLUGIN_TYPE_CONTROLLER;
+	#if PD_DECOMP
+	sprintf(PluginInfo->Name, "Mouse Injector for Perfect Dark Decomp "__MOUSE_INJECTOR_VERSION__"");
+	#else
 	sprintf(PluginInfo->Name, "Mouse Injector for GE/PD "__MOUSE_INJECTOR_VERSION__"");
-#ifdef SPEEDRUN_BUILD
+	#endif
+#if SPEEDRUN_BUILD
 	sprintf(PluginInfo->Name, "%s (Speedrun Build)", PluginInfo->Name);
 #endif
 }

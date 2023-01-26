@@ -2,6 +2,7 @@
 // Mouse Injector Plugin
 //==========================================================================
 // Copyright (C) 2016-2021 Carnivorous
+// Copyright Perfect Dark decomp compatability (C) 2023 Catherine Reprobate
 // All rights reserved.
 //
 // Mouse Injector is free software; you can redistribute it and/or modify it
@@ -22,6 +23,12 @@
 #include "../maindll.h"
 #include "game.h"
 #include "memory.h"
+#if PD_DECOMP
+#include "perfectdark.mi.h"
+#else
+#include "perfectdark.cached.h"
+#endif
+#include "perfectdark.h"
 
 #define GUNAIMLIMIT 14.12940025 // 0x41621206
 #define CROSSHAIRLIMIT 18.76135635 // 0x41961742
@@ -31,61 +38,37 @@
 #define BIKEROLLLIMIT 0.7852724195 // 0xBF49079D/0x3F49079D
 #define PI 3.1415927 // 0x40490FDB
 // PERFECT DARK ADDRESSES - OFFSET ADDRESSES BELOW (REQUIRES PLAYERBASE/BIKEBASE TO USE)
-#define PD_stanceflag 0x801BB74C - 0x801BB6A0
-#define PD_deathflag 0x801BB778 - 0x801BB6A0
-#define PD_camx 0x801BB7E4 - 0x801BB6A0
-#define PD_camy 0x801BB7F4 - 0x801BB6A0
-#define PD_fov 0x801BCEE8 - 0x801BB6A0
-#define PD_crosshairx 0x801BCD08 - 0x801BB6A0
-#define PD_crosshairy 0x801BCD0C - 0x801BB6A0
-#define PD_grabflag 0x801BB850 - 0x801BB6A0
-#define PD_bikeptr 0x801BD10C - 0x801BB6A0
-#define PD_thirdperson 0x801BB6A0 - 0x801BB6A0
-#define PD_gunrx 0x801BC374 - 0x801BB6A0
-#define PD_gunry 0x801BC378 - 0x801BB6A0
-#define PD_gunlx 0x801BCB18 - 0x801BB6A0
-#define PD_gunly 0x801BCB1C - 0x801BB6A0
-#define PD_aimingflag 0x801BB7C0 - 0x801BB6A0
-#define PD_gunrstate 0x801BC2DC - 0x801BB6A0
-#define PD_gunlstate 0x801BCA80 - 0x801BB6A0
-#define PD_gunrxrecoil 0x801BBE98 - 0x801BB6A0
-#define PD_gunryrecoil 0x801BBE9C - 0x801BB6A0
-#define PD_gunlxrecoil 0x801BC63C - 0x801BB6A0
-#define PD_gunlyrecoil 0x801BC640 - 0x801BB6A0
-#define PD_currentweapon 0x801BCC28 - 0x801BB6A0
-#define PD_bikebase 0x805142C4 - 0x805142C0
-#define PD_bikeyaw 0x804B1AB4 - 0x804B1A48
-#define PD_bikeroll 0x804B1B04 - 0x804B1A48
-#define PD_camspybase 0x801BBB20 - 0x801BB6A0
-#define PD_camspyflag 0x801BB6D4 - 0x801BB6A0
-#define PD_camspyx 0x80607EEC - 0x80607ED0
-#define PD_camspyy 0x80607EF8 - 0x80607ED0
-#define PD_camspyycos 0x80607EFC - 0x80607ED0
-#define PD_camspyysin 0x80607F00 - 0x80607ED0
-// STATIC ADDRESSES BELOW
-#define JOANNADATA(X) (unsigned int)EMU_ReadInt(0x8009A024 + (X * 0x4)) // player pointer address (0x4 offset for each players)
-#define PD_menu(X) 0x80070750 + (X * 0x4) // player menu flag (0 = PD is in menu) (0x4 offset for each players)
-#define PD_camera 0x8009A26C // camera flag (1 = gameplay, 2 & 3 = ???, 4 = multiplayer sweep, 5 = gameover screen, 6 = cutscene mode, 7 = force player to move: extraction's dark room)
-#define PD_pause 0x80084014 // menu flag (1 = PD is paused)
-#define PD_stageid 0x800624E4 // stage id
-#define PD_debugtext 0x803C79F0 // debug text (used to check if PD is running)
-#define PD_mppause 0x800ACBA6 // used to check if multiplayer match is paused
-#define PD_defaultratio 0x803CD680 // 16:9 ratio default
-#define PD_defaultfov 0x802EAA5C // field of view default
-#define PD_defaultfovzoom 0x802EACFC // field of view default for zoom
-#define PD_defaultzoominspeed 0x802DA8F8 // default zoom in speed
-#define PD_defaultzoomoutspeed 0x802DA924 // default zoom out speed
-#define PD_introcounter 0x800624C4 // counter for intro
-#define PD_controlstyle 0x80372728 // instruction reads the current controller style
-#define PD_reversepitch 0x803727A0 // instruction reads the current reverse pitch option
-#define PD_pickupyaxisthreshold 0x803CAE78 // y axis threshold on picking up weapons
-#define PD_weapontable 0x8006FF1C // weapon pointer table, used to change view model positions
-#define PD_radialmenutimer 0x802EA2BC // time instruction for radial menu to appear (15 ticks)
-#define PD_radialmenualphainit 0x803D2CDC // initial alpha value for all menus
-#define PD_blurfix 0x802DB68C // nop gap on chr function to store our blur fix
-#define PD_hiresoption 0x80322D9C // argument used to set hires mode on within options
-#define PD_camspylookspringup 0x802F13E8 // save instruction for adjusted camspy look spring pitch
-#define PD_camspylookspringdown 0x802F143C // save instruction for adjusted camspy look spring pitch
+#define PD_deathflag 0xd8
+#define PD_stanceflag 0xac
+#define PD_camx 0x144
+#define PD_camy 0x154
+#define PD_fov 0x1848
+#define PD_crosshairx 0x1668
+#define PD_crosshairy 0x166c
+#define PD_grabflag 0x1b0
+#define PD_bikeptr 0x1a6c
+#define PD_thirdperson 0x0
+#define PD_gunrx 0xcd4
+#define PD_gunry 0xcd8
+#define PD_gunlx 0x1478
+#define PD_gunly 0x147c
+#define PD_aimingflag 0x120
+#define PD_gunrstate 0xc3c
+#define PD_gunlstate 0x13e0
+#define PD_gunrxrecoil 0x7f8
+#define PD_gunryrecoil 0x7fc
+#define PD_gunlxrecoil 0xf9c
+#define PD_gunlyrecoil 0xfa0
+#define PD_currentweapon 0x1588
+#define PD_bikebase 0x4
+#define PD_bikeyaw 0x6c
+#define PD_bikeroll 0xbc
+#define PD_camspybase 0x480
+#define PD_camspyflag 0x34
+#define PD_camspyx 0x1c
+#define PD_camspyy 0x28
+#define PD_camspyycos 0x2c
+#define PD_camspyysin 0x30
 
 static unsigned int playerbase[4] = {0}; // current player's joannadata address
 static int xstick[4] = {0}, ystick[4] = {0}, usingstick[4] = {0}, slayerairbrakes[4] = {0}; // for camspy/slayer controls
@@ -127,8 +110,13 @@ const GAMEDRIVER *GAME_PERFECTDARK = &GAMEDRIVER_INTERFACE;
 //==========================================================================
 int PD_Status(void)
 {
+	#if PD_DECOMP
+	const int pd_menu = EMU_ReadInt(PD_menu(PLAYER1)), pd_camera = EMU_ReadInt(PD_camera), pd_pause = EMU_ReadInt(PD_pause)/* , pd_romcheck = EMU_ReadInt(PD_debugtext) */;
+	return (pd_menu >= 0 && pd_menu <= 1 && pd_camera >= 0 && pd_camera <= 7 && pd_pause >= 0 && pd_pause <= 1 /* && pd_romcheck == 0x206F6620 */); // if Perfect Dark is current game
+	#else
 	const int pd_menu = EMU_ReadInt(PD_menu(PLAYER1)), pd_camera = EMU_ReadInt(PD_camera), pd_pause = EMU_ReadInt(PD_pause), pd_romcheck = EMU_ReadInt(PD_debugtext);
 	return (pd_menu >= 0 && pd_menu <= 1 && pd_camera >= 0 && pd_camera <= 7 && pd_pause >= 0 && pd_pause <= 1 && pd_romcheck == 0x206F6620); // if Perfect Dark is current game
+	#endif
 }
 //==========================================================================
 // Purpose: calculate mouse movement and inject into current game
@@ -136,8 +124,10 @@ int PD_Status(void)
 //==========================================================================
 void PD_Inject(void)
 {
+	#if !PD_DECOMP
 	if(EMU_ReadInt(PD_stageid) < 1) // hacks can only be injected at boot sequence before code blocks are cached, so inject until player has spawned
 		PD_InjectHacks();
+	#endif
 	const int camera = EMU_ReadInt(PD_camera);
 	const int pause = EMU_ReadInt(PD_pause);
 	const int mppause = (EMU_ReadShort(PD_mppause) & 0xFF00);
@@ -439,18 +429,42 @@ static void PD_Controller(void)
 {
 	for(int player = PLAYER1; player < ALLPLAYERS; player++)
 	{
+		// c-pad
 		CONTROLLER[player].U_CBUTTON = DEVICE[player].BUTTONPRIM[FORWARDS] || DEVICE[player].BUTTONSEC[FORWARDS] || radialmenudirection[player][FORWARDS];
 		CONTROLLER[player].D_CBUTTON = DEVICE[player].BUTTONPRIM[BACKWARDS] || DEVICE[player].BUTTONSEC[BACKWARDS] || radialmenudirection[player][BACKWARDS];
 		CONTROLLER[player].L_CBUTTON = DEVICE[player].BUTTONPRIM[STRAFELEFT] || DEVICE[player].BUTTONSEC[STRAFELEFT] || radialmenudirection[player][STRAFELEFT];
 		CONTROLLER[player].R_CBUTTON = DEVICE[player].BUTTONPRIM[STRAFERIGHT] || DEVICE[player].BUTTONSEC[STRAFERIGHT] || radialmenudirection[player][STRAFERIGHT];
+
+		#if PD_DECOMP
+		// d-pad
+		CONTROLLER[player].U_DPAD = DEVICE[player].BUTTONPRIM[D_UP] || DEVICE[player].BUTTONSEC[D_UP];
+		CONTROLLER[player].D_DPAD = DEVICE[player].BUTTONPRIM[D_DOWN] || DEVICE[player].BUTTONSEC[D_DOWN];
+		CONTROLLER[player].L_DPAD = DEVICE[player].BUTTONPRIM[D_LEFT] || DEVICE[player].BUTTONSEC[D_LEFT];
+		CONTROLLER[player].R_DPAD = DEVICE[player].BUTTONPRIM[D_RIGHT] || DEVICE[player].BUTTONSEC[D_RIGHT];
+		#endif
+
+		// triggers / shoulders
 		CONTROLLER[player].Z_TRIG = DEVICE[player].BUTTONPRIM[FIRE] || DEVICE[player].BUTTONSEC[FIRE] || DEVICE[player].BUTTONPRIM[PREVIOUSWEAPON] || DEVICE[player].BUTTONSEC[PREVIOUSWEAPON];
 		CONTROLLER[player].R_TRIG = DEVICE[player].BUTTONPRIM[AIM] || DEVICE[player].BUTTONSEC[AIM];
+		#if PD_DECOMP
+		CONTROLLER[player].L_TRIG = DEVICE[player].BUTTONPRIM[L_SHOULDER] || DEVICE[player].BUTTONSEC[L_SHOULDER];
+		#endif
+
+		// "reserved" buttons
 #ifndef SPEEDRUN_BUILD // speedrun build does not have reload button support
 		CONTROLLER[player].RELOAD_HACK = DEVICE[player].BUTTONPRIM[RELOAD] || DEVICE[player].BUTTONSEC[RELOAD];
 #endif
+		#if PD_DECOMP
+		CONTROLLER[player].RESERVED = DEVICE[player].BUTTONPRIM[ALT2] || DEVICE[player].BUTTONSEC[ALT2];
+		#endif
+
+
+		// A, B, START
 		CONTROLLER[player].A_BUTTON = DEVICE[player].BUTTONPRIM[ACCEPT] || DEVICE[player].BUTTONSEC[ACCEPT] || DEVICE[player].BUTTONPRIM[PREVIOUSWEAPON] || DEVICE[player].BUTTONSEC[PREVIOUSWEAPON] || DEVICE[player].BUTTONPRIM[NEXTWEAPON] || DEVICE[player].BUTTONSEC[NEXTWEAPON];
 		CONTROLLER[player].B_BUTTON = DEVICE[player].BUTTONPRIM[CANCEL] || DEVICE[player].BUTTONSEC[CANCEL];
 		CONTROLLER[player].START_BUTTON = DEVICE[player].BUTTONPRIM[START] || DEVICE[player].BUTTONSEC[START];
+
+		// movement
 		DEVICE[player].ARROW[0] = (DEVICE[player].BUTTONPRIM[UP] || DEVICE[player].BUTTONSEC[UP]) ? 127 : 0;
 		DEVICE[player].ARROW[1] = (DEVICE[player].BUTTONPRIM[DOWN] || DEVICE[player].BUTTONSEC[DOWN]) ? -128 : 0;
 		DEVICE[player].ARROW[2] = (DEVICE[player].BUTTONPRIM[LEFT] || DEVICE[player].BUTTONSEC[LEFT]) ? -128 : 0;
@@ -474,6 +488,7 @@ static void PD_Controller(void)
 }
 //==========================================================================
 // Purpose: inject hacks into rom before code has been cached
+// This function is only called on a non-decomp Perfct Dark ROM.
 //==========================================================================
 static void PD_InjectHacks(void)
 {
