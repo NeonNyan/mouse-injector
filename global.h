@@ -2,6 +2,7 @@
 // Mouse Injector Plugin
 //==========================================================================
 // Copyright (C) 2016-2021 Carnivorous
+// Copyright Perfect Dark decomp compatability (C) 2023 Catherine Reprobate
 // All rights reserved.
 //
 // Mouse Injector is free software; you can redistribute it and/or modify it
@@ -17,8 +18,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program; if not, visit http://www.gnu.org/licenses/gpl-2.0.html
 //==========================================================================
+#if PD_DECOMP
+#define __MOUSE_INJECTOR_VERSION__ "V3.0"
+#else
 #define __MOUSE_INJECTOR_VERSION__ "V2.3"
+#endif
+#if PD_DECOMP
+#define __CURRENTYEAR__ "2023"
+#else
 #define __CURRENTYEAR__ "2021"
+#endif
 #define CONSOLE { AllocConsole(); AttachConsole(GetCurrentProcessId()); freopen("CON", "w", stdout); }
 #define ONLY1PLAYERACTIVE \
 (PROFILE[PLAYER1].SETTINGS[CONFIG] != DISABLED && PROFILE[PLAYER2].SETTINGS[CONFIG] == DISABLED && PROFILE[PLAYER3].SETTINGS[CONFIG] == DISABLED && PROFILE[PLAYER4].SETTINGS[CONFIG] == DISABLED || \
@@ -45,7 +54,38 @@ inline int ClampInt(const int value, const int min, const int max)
 }
 
 // profile struct
+#if PD_DECOMP
+enum CONTROLLERENUM {
+	FORWARDS = 0,
+	BACKWARDS,       // 1
+	STRAFELEFT,      // 2
+	STRAFERIGHT,     // 3
+	FIRE,            // 4
+	AIM,             // 5
+	RELOAD,          // 6
+	ACCEPT,          // 7
+	CANCEL,          // 8
+	START,           // 9
+	CROUCH,          // 10
+	KNEEL,           // 11
+	PREVIOUSWEAPON,  // 12
+	NEXTWEAPON,      // 13
+    UP,              // 14
+	DOWN,            // 15
+	LEFT,            // 16
+	RIGHT,           // 17
+	D_UP,            // 18
+	D_DOWN,          // 19
+	D_LEFT,          // 20
+	D_RIGHT,         // 21
+	ALT2,            // 22
+	L_SHOULDER,      // 23
+	TOTALBUTTONS,    // 24
+};
+#else
 enum CONTROLLERENUM {FORWARDS = 0, BACKWARDS, STRAFELEFT, STRAFERIGHT, FIRE, AIM, RELOAD, ACCEPT, CANCEL, START, CROUCH, KNEEL, PREVIOUSWEAPON, NEXTWEAPON, UP, DOWN, LEFT, RIGHT, TOTALBUTTONS};
+#endif
+
 enum CONFIGENUM {CONFIG = 0, SENSITIVITY, ACCELERATION, CROSSHAIR, INVERTPITCH, CROUCHTOGGLE, GEAIMMODE, PDAIMMODE, MOUSE, KEYBOARD, TOTALSETTINGS};
 enum QUICKCONFIGENUM {DISABLED = 0, WASD, ESDF, CUSTOM};
 enum PLAYERSENUM {PLAYER1 = 0, PLAYER2, PLAYER3, PLAYER4, ALLPLAYERS};
@@ -120,11 +160,10 @@ typedef union
 		unsigned U_CBUTTON: 1;
 		unsigned R_TRIG: 1;
 		unsigned L_TRIG: 1;
-		unsigned RELOAD_HACK: 1; // this unused button is reused as a hacked reload button
-		unsigned RESERVED: 1;
+		unsigned RELOAD_HACK: 1; /*0x04*/ // this unused button is reused as a hacked reload button
+		unsigned RESERVED: 1;	 /*0x08*/
 
 		signed Y_AXIS: 8;
-
 		signed X_AXIS: 8;
 	};
 } BUTTONS;

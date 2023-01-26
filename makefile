@@ -16,17 +16,22 @@ OBJDIR = $(SRCDIR)obj/
 UIDIR = $(SRCDIR)ui/
 DLLNAME = $(SRCDIR)Mouse_Injector.dll
 
+# Set to 1 to enable Perfect Dark decomp compatbility
+PD_DECOMP ?= 0
+
 #Compiler flags
 #USE_DISCORD_PRESENCE = uncomment line to add discord rich presence (requires clean and rebuild)
-#SPEEDRUN_BUILD = uncomment line to build speedrun version (requires clean and rebuild)
+SPEEDRUN_BUILD ?= 0
 CFLAGS = -ansi -O2 -m32 -std=c11 -Wall
 ifdef USE_DISCORD_PRESENCE
 	CFLAGS += -DADD_DISCORD_PRESENCE
 endif
-ifdef SPEEDRUN_BUILD
+ifeq ($(SPEEDRUN_BUILD),1)
 	CFLAGS += -DSPEEDRUN_BUILD
 	DLLNAME = $(SRCDIR)Mouse_Injector_Speedrun.dll
 endif
+CFLAGS += -DPD_DECOMP=$(PD_DECOMP)
+
 WARNINGS = -Wextra -pedantic -Wunreachable-code -Wno-parentheses -Wno-strict-aliasing
 RESFLAGS = -F pe-i386 --input-format=rc -O coff
 
@@ -44,8 +49,16 @@ mouseinjector: $(OBJS)
 
 all: clean mouseinjector
 
+# use different UI files and dll name for perfect dark decomp
+RCFILE=$(UIDIR)ui.rc
+RESOURCEFILE=$(UIDIR)resource.h
+ifeq ($(PD_DECOMP),1)
+	RCFILE=$(UIDIR)ui.perfectdark.rc
+	RESOURCEFILE=$(UIDIR)resource.perfectdark.h
+	DLLNAME = $(SRCDIR)Mouse_Injector_pddecomp.dll
+endif
 #Individual recipes
-$(OBJDIR)maindll.o: $(SRCDIR)maindll.c $(SRCDIR)global.h $(SRCDIR)maindll.h $(SRCDIR)device.h $(SRCDIR)discord.h $(UIDIR)ui.rc $(UIDIR)resource.h $(SRCDIR)vkey.h
+$(OBJDIR)maindll.o: $(SRCDIR)maindll.c $(SRCDIR)global.h $(SRCDIR)maindll.h $(SRCDIR)device.h $(SRCDIR)discord.h $(RCFILE) $(RESOURCEFILE) $(SRCDIR)vkey.h
 	$(CC) -c $(SRCDIR)maindll.c -o $(OBJDIR)maindll.o $(CFLAGS) $(WARNINGS) -Wno-unused-parameter
 
 $(OBJDIR)device.o: $(SRCDIR)device.c $(SRCDIR)global.h $(SRCDIR)device.h $(SRCDIR)maindll.h $(MANYMOUSEDIR)manymouse.h $(GAMESDIR)game.h
@@ -69,8 +82,8 @@ $(OBJDIR)goldeneye.o: $(GAMESDIR)goldeneye.c $(SRCDIR)global.h $(SRCDIR)device.h
 $(OBJDIR)perfectdark.o: $(GAMESDIR)perfectdark.c $(SRCDIR)global.h $(SRCDIR)device.h $(SRCDIR)maindll.h $(GAMESDIR)game.h $(GAMESDIR)memory.h
 	$(CC) -c $(GAMESDIR)perfectdark.c -o $(OBJDIR)perfectdark.o $(CFLAGS) $(WARNINGS)
 
-$(OBJDIR)ui.res: $(UIDIR)ui.rc $(UIDIR)resource.h
-	$(WINDRES) -i $(UIDIR)ui.rc -o $(OBJDIR)ui.res $(RESFLAGS)
+$(OBJDIR)ui.res: $(RCFILE) $(RESOURCEFILE)
+	$(WINDRES) -i $(RCFILE) -o $(OBJDIR)ui.res $(RESFLAGS)
 
 clean:
 	rm -fr $(SRCDIR)*.dll $(OBJDIR)*.o $(OBJDIR)*.res

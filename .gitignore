@@ -2,8 +2,7 @@
 .idea
 *.log
 tmp/
-
-
 *.o
 *.dll
 obj
+*.generated.h
